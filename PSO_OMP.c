@@ -4,81 +4,91 @@
 #include <time.h>
 #include <omp.h>
 
-#define N_PARTICLES 20
+#define N_PARTICLES 1000
 #define W 0.8
 #define C1 0.1
 #define C2 0.1
 #define N_ITERATIONS 50
+#define N 5
 
-double X[2][N_PARTICLES];
-double V[2][N_PARTICLES];
-double pbest[2][N_PARTICLES];
-double pbest_obj[N_PARTICLES];
-double gbest[2];
-double gbest_obj = INFINITY;
+typedef struct{
+    float x_pos;
+    float y_pos;
+    float x_velo;
+    float y_velo;
+    float x_best;
+    float y_best;
+    float best;
+
+}particle;
 
 // function we need to find the global minimum for.
 double f(double x, double y) {
     return pow(x - 3.14, 2) + pow(y - 2.72, 2) + sin(3 * x + 1.41) + sin(4 * y - 1.73);
 }
 
-void update() {
+void update(particle particles[N_PARTICLES], double gbest[2], double* gbest_obj) {
     double r1 = (double)rand() / RAND_MAX;
     double r2 = (double)rand() / RAND_MAX;
-
-    #pragma omp parallel for
+    particle *curr_particle; 
+    #pragma omp parallel for num_threads (N) private(curr_particle) shared(particles) schedule(static, N_PARTICLES/N)
     for (int i = 0; i < N_PARTICLES; i++) {
-        V[0][i] = W * V[0][i] + C1 * r1 * (pbest[0][i] - X[0][i]) + C2 * r2 * (gbest[0] - X[0][i]);
-        V[1][i] = W * V[1][i] + C1 * r1 * (pbest[1][i] - X[1][i]) + C2 * r2 * (gbest[1] - X[1][i]);
+        curr_particle = &particles[i];
+        curr_particle->x_velo = W * curr_particle->x_velo + C1 * r1 * (curr_particle->x_best - curr_particle->x_pos) + C2 * r2 * (gbest[0] - curr_particle->x_pos);
+        curr_particle->y_velo = W * curr_particle->y_velo + C1 * r1 * (curr_particle->y_best -curr_particle->y_pos) + C2 * r2 * (gbest[1] -curr_particle->y_pos);
 
-        X[0][i] += V[0][i];
-        X[1][i] += V[1][i];
+        curr_particle->x_pos += curr_particle->x_velo;
+        curr_particle->y_pos += curr_particle->y_velo;
 
-        double obj = f(X[0][i], X[1][i]);
-        if (pbest_obj[i] > obj) {
-            pbest[0][i] = X[0][i];
-            pbest[1][i] = X[1][i];
-            pbest_obj[i] = obj;
+        double obj = f(curr_particle->x_pos,curr_particle->y_pos);
+        if (curr_particle->best > obj) {
+            curr_particle->x_best = curr_particle->x_pos;
+            curr_particle->y_best =curr_particle->y_pos;
+            curr_particle->best = obj;
         }
     }
 
     int min_index = 0;
     for (int i = 1; i < N_PARTICLES; i++) {
-        if (pbest_obj[i] < pbest_obj[min_index]) {
+        if (particles[i].best < particles[min_index].best) {
             min_index = i;
         }
     }
 
-    if (pbest_obj[min_index] < gbest_obj) {
-        gbest_obj = pbest_obj[min_index];
-        gbest[0] = pbest[0][min_index];
-        gbest[1] = pbest[1][min_index];
+    if (particles[min_index].best < *gbest_obj) {
+        *gbest_obj = particles[min_index].best;
+        gbest[0] = particles[min_index].x_best;
+        gbest[1] = particles[min_index].y_best;
     }
-    
 }
 
 int main() {
-    srand(time(NULL));    
-
+    srand(time(NULL));
     clock_t start = clock();
+    // Initialize particles
+    particle particles [N_PARTICLES];
+    double gbest[2];
+    double gbest_obj = INFINITY;
+   
+
+    // initialize particles
     for (int i = 0; i < N_PARTICLES; i++) {
-        X[0][i] = (double)rand() / RAND_MAX * 5;
-        X[1][i] = (double)rand() / RAND_MAX * 5;
-        V[0][i] = (double)rand() / RAND_MAX * 0.1;
-        V[1][i] = (double)rand() / RAND_MAX * 0.1;
-        pbest[0][i] = X[0][i];
-        pbest[1][i] = X[1][i];
-        pbest_obj[i] = f(X[0][i], X[1][i]);
+        particles[i].x_pos = (double)rand() / RAND_MAX * 5;
+        particles[i].y_pos = (double)rand() / RAND_MAX * 5;
+        particles[i].x_velo = (double)rand() / RAND_MAX * 0.1;
+        particles[i].y_velo = (double)rand() / RAND_MAX * 0.1;
+        particles[i].x_best = particles[i].x_pos;
+        particles[i].y_best =particles[i].y_pos;
+        particles[i].best = f(particles[i].x_pos,particles[i].y_pos);
     }
 
-    
+
     // PSO iterations
     for (int i = 0; i < N_ITERATIONS; i++) {
-        update();
+        update(particles, gbest, &gbest_obj);
     }
     clock_t end = clock();
-    float total_time = (float)(end-start)/CLOCKS_PER_SEC;
-
+    double total_time = (double)(end - start) / CLOCKS_PER_SEC;
     printf("PSO found best solution at f(%lf,%lf)=%lf\n", gbest[0], gbest[1], gbest_obj);
     printf("Total time is: %f s\n", total_time);
 
