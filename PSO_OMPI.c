@@ -8,7 +8,7 @@
 #define W 0.8
 #define C1 0.1
 #define C2 0.1
-#define N_ITERATIONS 50
+#define N_ITERATIONS 500
 
 int size;
 typedef struct{
@@ -74,43 +74,48 @@ int main() {
     particle particles[N_PARTICLES/size];
     double gbest[3] = {INFINITY, 0, 0};
     clock_t start = clock();
-    for (int i = 0; i < N_PARTICLES/size; i++) {
-        particles[i].x_pos = (double)rand() / RAND_MAX * 5;
-        particles[i].y_pos = (double)rand() / RAND_MAX * 5;
-        particles[i].x_velo = (double)rand() / RAND_MAX * 0.1;
-        particles[i].y_velo = (double)rand() / RAND_MAX * 0.1;
-        particles[i].x_best = particles[i].x_pos;
-        particles[i].y_best = particles[i].y_pos;
-        particles[i].best = f(particles[i].x_pos, particles[i].y_pos);
-    }
-
-    // PSO iterations
-    for (int i = 0; i < N_ITERATIONS; i++) {
-        update(particles, gbest);
-        
-    }
-
-    if (rank != 0) {
-        MPI_Send(&gbest, 3, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
-    }
-
-    if (rank == 0) {
-        double process_gbest[3];
-        for (int i = 1; i < size; i++) {
-            MPI_Recv(&process_gbest, 3, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            if (gbest[0] > process_gbest[0]) {
-                gbest[0] = process_gbest[0];
-                gbest[1] = process_gbest[1];
-                gbest[2] = process_gbest[2];
-            }
+    double total_time;
+    for(int k = 0; k<10; k++){
+        for (int i = 0; i < N_PARTICLES/size; i++) {
+            particles[i].x_pos = (double)rand() / RAND_MAX * 5;
+            particles[i].y_pos = (double)rand() / RAND_MAX * 5;
+            particles[i].x_velo = (double)rand() / RAND_MAX * 0.1;
+            particles[i].y_velo = (double)rand() / RAND_MAX * 0.1;
+            particles[i].x_best = particles[i].x_pos;
+            particles[i].y_best = particles[i].y_pos;
+            particles[i].best = f(particles[i].x_pos, particles[i].y_pos);
         }
-        clock_t end = clock();
-        double total_time = (double)(end - start) / CLOCKS_PER_SEC;
-        printf("PSO found best solution at f(%lf,%lf)=%lf\n", gbest[1], gbest[2], gbest[0]);
-        printf("Total time is: %lf s\n", total_time);
-    }
 
-    MPI_Finalize();
+        // PSO iterations
+        for (int i = 0; i < N_ITERATIONS; i++) {
+            update(particles, gbest);
+            
+        }
+
+        if (rank != 0) {
+            MPI_Send(&gbest, 3, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
+        }
+
+        if (rank == 0) {
+            double process_gbest[3];
+            for (int i = 1; i < size; i++) {
+                MPI_Recv(&process_gbest, 3, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                if (gbest[0] > process_gbest[0]) {
+                    gbest[0] = process_gbest[0];
+                    gbest[1] = process_gbest[1];
+                    gbest[2] = process_gbest[2];
+                }
+            }
+            clock_t end = clock();
+            total_time += (double)(end - start) / CLOCKS_PER_SEC;}
+        }
+        MPI_Finalize();
+        if(rank == 0){
+            printf("PSO found best solution at f(%lf,%lf)=%lf\n", gbest[1], gbest[2], gbest[0]);
+            printf("Average time is: %lf s\n", total_time/10);
+        }
+
+    
     return 0;
 }
 
