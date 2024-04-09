@@ -73,9 +73,9 @@ int main() {
     // Initialize particles
     particle particles[N_PARTICLES/size];
     double gbest[3] = {INFINITY, 0, 0};
-    clock_t start = clock();
     double total_time;
     for(int k = 0; k<10; k++){
+        clock_t start = clock();
         for (int i = 0; i < N_PARTICLES/size; i++) {
             particles[i].x_pos = (double)rand() / RAND_MAX * 5;
             particles[i].y_pos = (double)rand() / RAND_MAX * 5;
@@ -107,15 +107,14 @@ int main() {
                 }
             }
             clock_t end = clock();
-            total_time += (double)(end - start) / CLOCKS_PER_SEC;}
+            total_time += (double)(end - start) / CLOCKS_PER_SEC;
         }
-        MPI_Finalize();
-        if(rank == 0){
-            printf("PSO found best solution at f(%lf,%lf)=%lf\n", gbest[1], gbest[2], gbest[0]);
-            printf("Average time is: %lf s\n", total_time/10);
-        }
-
-    
+    }
+    MPI_Finalize();
+    if(rank == 0){
+        printf("PSO found best solution at f(%lf,%lf)=%lf\n", gbest[1], gbest[2], gbest[0]);
+        printf("Average time is: %lf s\n", total_time/10);
+    }    
     return 0;
 }
 
