@@ -9,7 +9,7 @@
 #define C1 0.1
 #define C2 0.1
 #define N_ITERATIONS 50
-#define N 5
+#define N 8
 
 typedef struct {
     float x_pos;
@@ -56,33 +56,33 @@ int main() {
     double gbest[2];
     double gbest_obj = INFINITY;
     double total_time;
-
-    clock_t start = clock();
-    #pragma omp parallel for
-    for (int i = 0; i < N_PARTICLES; i++) {
-        particles[i].x_pos = (double)rand() / RAND_MAX * 5;
-        particles[i].y_pos = (double)rand() / RAND_MAX * 5;
-        particles[i].x_velo = (double)rand() / RAND_MAX * 0.1;
-        particles[i].y_velo = (double)rand() / RAND_MAX * 0.1;
-        particles[i].x_best = particles[i].x_pos;
-        particles[i].y_best = particles[i].y_pos;
-        particles[i].best = f(particles[i].x_pos, particles[i].y_pos);
-    }
-
-    // PSO iterations
-    for (int i = 0; i < N_ITERATIONS; i++) {
-        double r1 = (double)rand() / RAND_MAX;
-        double r2 = (double)rand() / RAND_MAX;
-        #pragma omp parallel for
-        for (int j = 0; j < N_PARTICLES; j++) {
-            update_particle(&particles[j], gbest, &gbest_obj, r1, r2);
+    for(int k = 0; k<10; k++){
+        clock_t start = clock();
+        #pragma omp parallel for num_threads(N)
+        for (int i = 0; i < N_PARTICLES; i++) {
+            particles[i].x_pos = (double)rand() / RAND_MAX * 5;
+            particles[i].y_pos = (double)rand() / RAND_MAX * 5;
+            particles[i].x_velo = (double)rand() / RAND_MAX * 0.1;
+            particles[i].y_velo = (double)rand() / RAND_MAX * 0.1;
+            particles[i].x_best = particles[i].x_pos;
+            particles[i].y_best = particles[i].y_pos;
+            particles[i].best = f(particles[i].x_pos, particles[i].y_pos);
         }
-    }
-    clock_t end = clock();
-    total_time = (double)(end - start) / CLOCKS_PER_SEC;
 
+        // PSO iterations
+        for (int i = 0; i < N_ITERATIONS; i++) {
+            double r1 = (double)rand() / RAND_MAX;
+            double r2 = (double)rand() / RAND_MAX;
+            #pragma omp parallel for num_threads(N)
+            for (int j = 0; j < N_PARTICLES; j++) {
+                update_particle(&particles[j], gbest, &gbest_obj, r1, r2);
+            }
+        }
+        clock_t end = clock();
+        total_time += (double)(end - start) / CLOCKS_PER_SEC;
+    }
     printf("PSO found best solution at f(%lf,%lf)=%lf\n", gbest[0], gbest[1], gbest_obj);
-    printf("Average time is: %f s\n", total_time);
+    printf("Average time is: %f s\n", total_time/10);
 
     return 0;
 }
