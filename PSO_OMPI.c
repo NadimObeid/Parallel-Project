@@ -72,9 +72,12 @@ int main() {
     srand(rank + time(NULL));
     // Initialize particles
     particle particles[N_PARTICLES/size];
-    double gbest[3] = {INFINITY, 0, 0};
+    double gbest[3];
     double total_time;
     for(int k = 0; k<10; k++){
+        gbest[0] = INFINITY;
+        gbest[1] = 0;
+        gbest[2] = 0;
         clock_t start = clock();
         for (int i = 0; i < N_PARTICLES/size; i++) {
             particles[i].x_pos = (double)rand() / RAND_MAX * 5;
