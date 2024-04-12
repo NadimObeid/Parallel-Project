@@ -2,7 +2,6 @@
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
-#include <omp.h>
 
 #define N_PARTICLES 1000
 #define W 0.8
@@ -65,11 +64,14 @@ int main() {
     // Initialize particles
     particle particles[N_PARTICLES];
     double gbest[2];
-    double gbest_obj = INFINITY;
+    double gbest_obj;
     double total_time;
     for(int k = 0; k< 10; k++){
     // initialize particles
         clock_t start = clock();
+        gbest[0] = 0;
+        gbest[1] = 0;
+        gbest_obj = INFINITY;
         for (int i = 0; i < N_PARTICLES; i++) {
             particles[i].x_pos = (double)rand() / RAND_MAX * 5;
             particles[i].y_pos = (double)rand() / RAND_MAX * 5;
